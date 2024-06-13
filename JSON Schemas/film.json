@@ -1,0 +1,80 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "film.json#",
+	"definitions": {
+		"privateFilm": {
+			"$schema": "http://json-schema.org/draft-07/schema#",
+			"$id": "privateFilm",
+			"type": "object",
+			"properties": {
+				"watchDate": {
+					"type": "string",
+					"format": "date"
+				},
+				"rating": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 10
+				},
+				"favorite": {
+					"type": "boolean",
+					"default": false
+				}
+			}
+		},
+		"requiredfilm": {
+			"$schema": "http://json-schema.org/draft-07/schema#",
+			"$id": "requiredfilm",
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "integer"
+				},
+				"title": {
+					"type": "string"
+				},
+				"owner": {
+					"type": "integer"
+				},
+				"private": {
+					"type": "boolean",
+					"default": true
+				}
+			},
+			"required": [
+				"title",
+				"owner",
+				"private"
+			],
+			"if": {
+				"properties": {
+					"private": {
+						"enum": [
+							true
+						]
+					}
+				}
+			},
+			"then": {
+				"oneOf": [
+					{
+						"$ref": "film.json#/definitions/privateFilm"
+					}
+				]
+			},
+			"else": {
+				"properties": {
+					"watchDate": false,
+					"rating": false,
+					"favorite": false
+				}
+			}
+		}
+	},
+	"type": "object",
+	"oneOf": [
+		{
+			"$ref": "#/definitions/requiredfilm"
+		}
+	]
+}

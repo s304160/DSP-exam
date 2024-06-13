@@ -1,0 +1,9 @@
+{
+	"$schema": "../review.json",
+	"filmId": 0,
+	"reviewerId": 0,
+	"completed": true,
+	"reviewDate": "2020-01-01",
+	"rating": 0,
+	"review": "review"
+}

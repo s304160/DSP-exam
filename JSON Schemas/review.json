@@ -1,0 +1,78 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "reviewSchema",
+	"definitions": {
+		"review": {
+			"$id": "review",
+			"properties": {
+				"filmId": {
+					"type": "integer"
+				},
+				"reviewerId": {
+					"type": "integer"
+				},
+				"completed": {
+					"type": "boolean",
+					"default": false
+				}
+			},
+			"required": [
+				"filmId",
+				"reviewerId",
+				"completed"
+			],
+			"if": {
+				"properties": {
+					"completed": {
+						"enum": [
+							true
+						]
+					}
+				}
+			},
+			"then": {
+				"oneOf": [
+					{
+						"$ref": "#/definitions/completedReview"
+					}
+				]
+			},
+			"else": {
+				"properties": {
+					"reviewDate": false,
+					"rating": false,
+					"review": false
+				}
+			}
+		},
+		"completedReview": {
+			"$id": "completedReview",
+			"properties": {
+				"reviewDate": {
+					"type": "string",
+					"format": "date"
+				},
+				"rating": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 10
+				},
+				"review": {
+					"type": "string",
+					"maxLength": 1000
+				}
+			},
+			"required": [
+				"reviewDate",
+				"rating",
+				"review"
+			]
+		}
+	},
+	"type": "object",
+	"oneOf": [
+		{
+			"$ref": "#/definitions/review"
+		}
+	]
+}

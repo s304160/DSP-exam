@@ -1,0 +1,10 @@
+{
+	"$schema": "../film.json",
+	"id": 0,
+	"title": "title1",
+	"owner": 1,
+	"private": true,
+	"watchDate": "2020-01-01",
+	"rating": 0,
+	"favorite": false
+}
