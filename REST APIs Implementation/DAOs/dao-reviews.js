@@ -14,19 +14,19 @@ exports.getReviews = (filmId) => {
 			`SELECT * FROM reviews WHERE
 			filmId = ?`;
 
-		db.all(sql, [filmId], (err, row) => {
+		db.all(sql, [filmId], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row == undefined) {
+			if (rows === undefined || rows.length === 0) {
 				resolve({ error: 'No review found.' });
-			} else {
-				// WARN: database is case insensitive. Converting "watchDate" to camel case format
-				const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
-				delete review.watchdate;  // removing lowercase "reviewdate"
-				resolve(review);
+				return;
 			}
+			// WARN: database is case insensitive. Converting "watchDate" to camel case format
+			const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
+			delete review.watchdate;  // removing lowercase "reviewdate"
+			resolve(review);
 		});
 	});
 };
@@ -46,12 +46,13 @@ exports.getReview = (filmId, reviewerId) => {
 			}
 			if (row == undefined) {
 				resolve({ error: 'Review not found.' });
-			} else {
-				// WARN: database is case insensitive. Converting "watchDate" to camel case format
-				const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
-				delete review.watchdate;  // removing lowercase "reviewdate"
-				resolve(review);
+				return;
 			}
+
+			// WARN: database is case insensitive. Converting "watchDate" to camel case format
+			const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
+			delete review.reviewdate;  // removing lowercase "reviewdate"
+			resolve(review);
 		});
 	});
 };
@@ -72,6 +73,7 @@ exports.issueReview = (review, users) => {
 					reject(err);
 					return;
 				}
+				resolve(true)
 			});
 		}
 	});
@@ -86,6 +88,8 @@ exports.issueAutomaticReviews = (filmId) => {
 
 		const check = `SELECT COUNT(*) as tot FROM reviews WHERE filmId = ?`;
 
+		let filteredUsers;
+
 		db.get(check, [filmId], (err, row) => {
 			if (err) {
 				console.error(err)
@@ -95,11 +99,11 @@ exports.issueAutomaticReviews = (filmId) => {
 
 			console.log(JSON.stringify(row))
 
-			if (row.tot != 0) {
+			if (row.tot !== 0) {
 				console.log(JSON.stringify(row))
 				resolve("The film already has at least one review issued.")
-
 			}
+
 			console.log(JSON.stringify(row))
 
 			const getUsers =
@@ -131,7 +135,7 @@ exports.issueAutomaticReviews = (filmId) => {
 			`INSERT INTO reviews (filmId, reviewerId, completed)
 			VALUES(?, ?, ?)`;
 
-		for (u in users) {
+		for (u in filteredUsers) {
 			db.run(sql, [filmId, u, false], (err) => {
 				if (err) {
 					reject(err);
@@ -139,7 +143,7 @@ exports.issueAutomaticReviews = (filmId) => {
 				}
 			});
 		}
-		// resolve(true);
+		resolve(filteredUsers);
 	});
 };
 
@@ -157,6 +161,10 @@ exports.updateReview = (filmId, reviewerId, review) => {
 					reject(err);
 					return;
 				}
+				if (this.changes === 0) {
+					resolve(null)
+					return;
+				}
 				resolve({ filmId, reviewerId, review });
 			});
 	});
@@ -172,8 +180,13 @@ exports.deleteReview = (filmId, reviewerId) => {
 			if (err) {
 				reject(err);
 				return;
-			} else
-				resolve(null);
+			}
+			if (this.changes === 0) {
+				resolve(null)
+				return;
+			}
+
+			resolve(true);
 		});
 	});
 }

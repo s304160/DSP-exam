@@ -1,13 +1,9 @@
 'use strict';
 
-/*** Importing modules ***/
+/* --- Importing modules --- */
 const express = require('express');
 const morgan = require('morgan'); // logging middleware
 const cors = require('cors');
-
-/** Validation-related imports **/
-const { ValidationError } = require("express-json-validator-middleware");
-
 
 const path = require('path');
 const http = require('http');
@@ -27,10 +23,7 @@ const expressAppConfig = oas3Tools.expressAppConfig(path.join(__dirname, '../RES
 const app = expressAppConfig.getApp();
 
 
-
-
-
-/*** Passport ***/
+/* --- PASSPORT --- */
 const { passport } = require('./components/passport')
 
 // Creating the session
@@ -42,21 +35,13 @@ app.use(session({
 app.use(passport.authenticate('session'));
 
 
-/*** init express and set-up the middlewares ***/
+
+/* --- init express and set-up the middlewares --- */
 app.use(morgan('dev'));
 app.use(express.json());
 
-app.use((error, request, response, next) => {
-	// Check the error is a validation error
-	if (error instanceof ValidationError) {
-		// Handle the error
-		response.status(400).send(error.validationErrors);
-		next();
-	} else {
-		// Pass error on if not a validation error
-		next(error);
-	}
-});
+/* --- SCHEMAS --- */
+app.use('/JSONSchemas', express.static(path.join(__dirname, '../JSON Schemas')));
 
 
 // Initialize the Swagger middleware
@@ -66,6 +51,7 @@ http.createServer(app).listen(serverPort, function () {
 });
 
 module.exports = { app }
+
 
 /* ----- API ----- */
 require('./api')

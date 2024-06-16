@@ -3,7 +3,7 @@ info:
   title: Film API
   version: "1.0"
 servers:
-  - url: http://localhost:3001
+  - url: http://localhost:8080
 paths:
   /user/login:
     post:
@@ -17,12 +17,15 @@ paths:
           application/json:
             schema:
               properties:
-                email:
+                username:
                   type: string
                   format: email
                 password:
                   type: string
                   format: password
+            examples:
+              login1:
+                $ref: "#/components/examples/login1"
       responses:
         "200":
           description: login successful
@@ -51,14 +54,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../JSON Schemas/film.json"
+              $ref: "/JSONSchemas/film.json"
+            examples:
+              publicFilmExample:
+                $ref: "#/components/examples/publicFilmReq"
+              privateFilmExample:
+                $ref: "#/components/examples/privateFilmReq"
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/film.json"
+                $ref: "/JSONSchemas/film.json"
         "400":
           description: Invalid input
         "422":
@@ -88,7 +96,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/film.json"
+                $ref: "/JSONSchemas/film.json"
         "400":
           description: Invalid ID
         "401":
@@ -118,14 +126,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../JSON Schemas/film.json"
+              $ref: "/JSONSchemas/film.json"
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/film.json"
+                $ref: "/JSONSchemas/film.json"
         "400":
           description: Invalid ID
         "401":
@@ -178,7 +186,7 @@ paths:
                 maxItems: 10
                 type: array
                 items:
-                  $ref: "../JSON Schemas/film.json"
+                  $ref: "/JSONSchemas/film.json"
                 x-content-type: application/json
         "404":
           description: No films found
@@ -207,11 +215,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/film.json"
+                $ref: "/JSONSchemas/film.json"
+              examples:
+                publicFilmExample:
+                  $ref: "#/components/examples/publicFilmRes"
+
         "400":
           description: Invalid ID
-        "401":
-          description: Unauthorized - the film is not public
         "404":
           description: Film not found
       security: []
@@ -231,7 +241,7 @@ paths:
                 maxItems: 10
                 type: array
                 items:
-                  $ref: "../JSON Schemas/film.json"
+                  $ref: "/JSONSchemas/film.json"
                 x-content-type: application/json
         "401":
           description: Unauthorized
@@ -255,7 +265,7 @@ paths:
                 maxItems: 10
                 type: array
                 items:
-                  $ref: "../JSON Schemas/film.json"
+                  $ref: "/JSONSchemas/film.json"
                 x-content-type: application/json
         "401":
           description: Unauthorized
@@ -277,7 +287,7 @@ paths:
               type: object
               properties:
                 review:
-                  $ref: "../JSON Schemas/review.json"
+                  $ref: "/JSONSchemas/review.json"
                 users:
                   type: array
                   items:
@@ -288,7 +298,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/review.json"
+                $ref: "/JSONSchemas/review.json"
         "400":
           description: Invalid input
         "401":
@@ -342,14 +352,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../JSON Schemas/review.json"
+              $ref: "/JSONSchemas/review.json"
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "../JSON Schemas/review.json"
+                $ref: "/JSONSchemas/review.json"
         "400":
           description: Invalid ID
         "401":
@@ -410,7 +420,7 @@ paths:
                 maxItems: 10
                 type: array
                 items:
-                  $ref: "../JSON Schemas/review.json"
+                  $ref: "/JSONSchemas/review.json"
                 x-content-type: application/json
         "400":
           description: Invalid ID
@@ -455,7 +465,7 @@ paths:
                 maxItems: 10
                 type: array
                 items:
-                  $ref: "../JSON Schemas/review.json"
+                  $ref: "/JSONSchemas/review.json"
                 x-content-type: application/json
         "400":
           description: Invalid ID
@@ -465,9 +475,162 @@ paths:
           description: Film not found or review not found
       security: []
       x-swagger-router-controller: Review
+  /like/{filmId}:
+    get:
+      tags:
+        - like
+        - noAuth
+      description: Returns the total number of likes of a public film and the list of users who like it
+      operationId: getFilmLikes
+      parameters:
+        - name: filmId
+          in: path
+          description: ID of film
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: total count of likes
+                  users:
+                    maxItems: 10
+                    type: array
+                    items:
+                      $ref: "/JSONSchemas/user.json"
+              x-content-type: application/json
+        "400":
+          description: Invalid ID
+          content:
+            application/json: {}
+
+        "404":
+          description: No like found associated to the film id.
+        "500":
+          description: Internal server error.
+      security: []
+      x-swagger-router-controller: Review
+    delete:
+      tags:
+        - like
+      description: Deletes a like
+      operationId: deletLike
+      parameters:
+        - name: filmId
+          in: path
+          description: Film Id
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "400":
+          description: Invalid Id
+        "401":
+          description: Unauthorized
+        "404":
+          description: Film not found
+      security:
+        - cookieAuth: []
+      x-swagger-router-controller: Review
+    post:
+      tags:
+        - like
+      description: like a film
+      operationId: likeFilm
+      parameters:
+        - name: filmId
+          in: path
+          description: Film Id
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+      security:
+        - cookieAuth: []
+      x-swagger-router-controller: Review
+
+#####
 components:
   securitySchemes:
     cookieAuth:
       type: apiKey
       name: sessionCookie
       in: cookie
+
+  ###
+  examples:
+    privateFilmReq:
+      value:
+        title: Inception
+        private: true
+        watchDate: "2023-06-13"
+        rating: 9
+        favorite: true
+    publicFilmReq:
+      value:
+        title: The Matrix
+        private: false
+    privateFilmRes:
+      value:
+        id: 8
+        title: Inception
+        owner: 1
+        private: true
+        watchDate: "2023-06-13"
+        rating: 9
+        favorite: true
+    publicFilmRes:
+      value:
+        id: 9
+        title: The Matrix
+        owner: 1
+        private: false
+    review1:
+      value:
+        filmId: 1
+        reviewerId: 2
+        completed: true
+        reviewDate: "2024-06-13"
+        rating: 8
+        review: A fascinating and thought-provoking film with stunning visuals and an intricate plot.
+    review2:
+      value:
+        filmId: 2
+        reviewerId: 1002
+        completed: false
+    user1:
+      value:
+        id: 1
+        name: John
+        email: john.doe@polito.it
+        password: password
+    login1:
+      value:
+        username: john.doe@polito.it
+        password: password
+    user2:
+      value:
+        id: 2,
+        email: mario.rossi@polito.it

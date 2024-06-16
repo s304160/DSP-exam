@@ -32,9 +32,12 @@ exports.listFilters = () => {
 // This function retrieves the whole list of films from the database.
 exports.getFilmsByOwner = (userId, filter) => {
 	return new Promise((resolve, reject) => {
-		const sql = 'SELECT * FROM films WHERE owner=?';
+		const sql = 'SELECT * FROM films WHERE owner = ?';
 		db.all(sql, [userId], (err, rows) => {
-			if (err) { reject(err); return; }
+			if (err) {
+				reject(err);
+				return;
+			}
 
 			const films = rows.map((e) => {
 				// WARN: the database returns only lowercase fields. So, to be compliant with the client-side, we convert "watchdate" to the camelCase version ("watchDate").
@@ -51,26 +54,28 @@ exports.getFilmsByOwner = (userId, filter) => {
 	});
 };
 
-// This function retrieves a film given its id owned by the logged user.
+/**
+ * This function retrieves a film owned by the logged user given its id.
+ */
 exports.getFilm = (id, userId) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`SELECT * FROM films WHERE
-			id=? AND owner = ?`;
+			id = ? AND owner = ?`;
 
 		db.get(sql, [id, userId], (err, row) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row == undefined) {
-				resolve({ error: 'Film not found.' });
-			} else {
-				// WARN: database is case insensitive. Converting "watchDate" to camel case format
-				const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
-				delete film.watchdate;  // removing lowercase "watchdate"
-				resolve(film);
-			}
+			if (row === undefined)
+				resolve(null);
+
+			// WARN: database is case insensitive. Converting "watchDate" to camel case format
+			const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
+			delete film.watchdate;  // removing lowercase "watchdate"
+			resolve(film);
+
 		});
 	});
 };
@@ -80,18 +85,22 @@ exports.getFilm = (id, userId) => {
  * This function adds a new film in the database.
  * The film id is added automatically by the DB, and it is returned as this.lastID.
  */
-exports.createFilm = (film, userId) => {
+exports.createFilm = (film) => {
 	return new Promise((resolve, reject) => {
-		const sql = 'INSERT INTO films (title, owner, private, favorite, watchDate, rating) VALUES(?, ?, ?, ?, ?, ?)';
-		db.run(sql, [film.title, userId, film.private, film.favorite, film.watchDate, film.rating], function (err) {
-			if (err) {
-				console.log(err)
-				reject(err);
-				return;
-			}
-			// Returning the newly created object with the DB additional properties to the client.			
-			resolve(exports.getFilm(this.lastID));
-		});
+		const sql =
+			`INSERT INTO films (title, owner, private, favorite, watchDate, rating)
+			VALUES(?, ?, ?, ?, ?, ?)`;
+		db.run(sql, [film.title, film.owner, film.private, film.favorite, film.watchDate, film.rating],
+			function (err) {
+				if (err) {
+					console.log(err)
+					reject(err);
+					return;
+				}
+
+				// Returning the newly created object with the DB additional properties to the client.			
+				resolve(exports.getFilm(this.lastID, film.owner));
+			});
 	});
 };
 
@@ -102,14 +111,16 @@ exports.updateFilm = (id, userId, film) => {
 			`UPDATE films SET title = ?, private = ?, favorite = ?, watchDate = ?, rating = ?
 			WHERE id = ? AND owner = ?`;
 		db.run(sql,
-			[film.title, film.private, film.favorite, film.watchDate, film.rating,
-				id, userId],
-			function (err) {
+			[film.title, film.private, film.favorite, film.watchDate, film.rating, id, userId],
+			function (err, result) {
 				if (err) {
 					reject(err);
 					return;
 				}
-				resolve({ id, film });
+				if (this.changes === 0) {
+					resolve(null)
+				}
+				resolve(exports.getFilm(id, userId));
 			});
 	});
 };
@@ -122,8 +133,12 @@ exports.deleteFilm = (filmId, userId) => {
 			if (err) {
 				reject(err);
 				return;
-			} else
-				resolve(null);
+			}
+			if (this.changes === 0) {
+				resolve(null)
+			}
+
+			resolve(true);
 		});
 	});
 }
@@ -135,22 +150,19 @@ exports.deleteFilm = (filmId, userId) => {
 exports.getPublicFilm = (filmId) => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM films WHERE
-			id=? AND private = 0`;
+			`SELECT id, title, owner, private FROM films WHERE
+			id = ? AND private = 0`;
 
 		db.get(sql, [filmId], (err, row) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row == undefined) {
-				resolve({ error: 'Film not found.' });
-			} else {
-				// WARN: database is case insensitive. Converting "watchDate" to camel case format
-				const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
-				delete film.watchdate;  // removing lowercase "watchdate"
-				resolve(film);
+			if (row === undefined) {
+				resolve(null);
 			}
+
+			resolve(row)
 		});
 	});
 };
@@ -160,23 +172,20 @@ exports.getPublicFilm = (filmId) => {
 exports.getPublicFilms = () => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM films WHERE
+			`SELECT id, title, owner, private FROM films WHERE
 			private = 0
 			LIMIT 10`;
 
-		db.all(sql, (err, row) => {
+		db.all(sql, (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row == undefined) {
-				resolve({ error: 'Film not found.' });
-			} else {
-				// WARN: database is case insensitive. Converting "watchDate" to camel case format
-				const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
-				delete film.watchdate;  // removing lowercase "watchdate"
-				resolve(film);
-			}
+			if (rows === undefined || rows.length === 0)
+				resolve(null);
+
+			resolve(rows);
+
 		});
 	});
 };

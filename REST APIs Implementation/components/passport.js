@@ -6,8 +6,12 @@ const LocalStrategy = require('passport-local');
 const userDao = require('../DAOs/dao-users'); // module for accessing the user table in the DB
 
 // Set up local strategy to verify, search in the DB a user with a matching password, and retrieve its information by userDao.getUser (i.e., id, username, name).
-passport.use(new LocalStrategy(async function verify(username, password, cb) {
-	const user = await userDao.getUser(username, password)
+passport.use(new LocalStrategy(async function verify(email, password, cb) {
+
+	console.log(email)
+	console.log(password)
+
+	const user = await userDao.login(email, password)
 	if (!user)
 		return cb(null, false, 'Incorrect username or password');
 

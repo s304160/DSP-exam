@@ -8,7 +8,10 @@
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen",
 			"name": "dbg-mon-server",
-			"program": "${workspaceFolder}/index.js",
+			"program": "nodemon ",
+			"args": [
+				"${workspaceFolder}/REST APIs Implementation/index.js"
+			],
 			"cwd": "${workspaceFolder}",
 			"request": "launch",
 			"restart": true,
