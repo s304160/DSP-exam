@@ -78,7 +78,7 @@ paths:
     get:
       tags:
         - film
-      description: Returns a film by Id
+      description: Returns a film by Id owned by the logged user
       operationId: getFilm
       parameters:
         - name: filmId
@@ -175,8 +175,17 @@ paths:
       tags:
         - film
         - noAuth
-      description: Returns the list of public films
+      description: Returns a page of 10 public films
       operationId: getPublicFilms
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          explode: false
+          schema:
+            type: integer
+            format: int64
       responses:
         "200":
           description: successful operation
@@ -192,12 +201,12 @@ paths:
           description: No films found
       security: []
       x-swagger-router-controller: Film
-  /films/public/{filmId}:
+  /film/public/{filmId}:
     get:
       tags:
         - film
         - noAuth
-      description: Returns a film by Id
+      description: Returns a public film by Id
       operationId: getPublicFilm
       parameters:
         - name: filmId
@@ -254,8 +263,17 @@ paths:
     get:
       tags:
         - film
-      description: Returns the list of films the user has been invited to review
+      description: Returns a page of 10 films the user has been invited to review
       operationId: getFilmToReview
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          explode: false
+          schema:
+            type: integer
+            format: int64
       responses:
         "200":
           description: successful operation

@@ -52,10 +52,10 @@ app.put('/film/:filmId', isLoggedIn, filmController.updateFilm);
 app.delete('/film/:filmId', isLoggedIn, filmController.deleteFilm);
 
 app.get('/films/owned', isLoggedIn, filmController.getFilmsByOwner);
-// app.get('/films/toReview', isLoggedIn, filmController.getFilmToReview);
+app.get('/films/toReview', isLoggedIn, filmController.getFilmsToReview);
 
 app.get('/films/public', filmController.getPublicFilms);
-app.get('/films/public/:filmId', filmController.getPublicFilm);
+app.get('/film/public/:filmId', filmController.getPublicFilm);
 
 /* --- Review API --- */
 

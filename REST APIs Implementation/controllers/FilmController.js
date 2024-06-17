@@ -3,7 +3,6 @@
 const utils = require('../utils/writer.js');
 const filmDao = require('../DAOs/dao-films.js');
 
-
 module.exports.createFilm = function createFilm(req, res, next) {
 	filmDao.createFilm(req.body)
 		.then(function (response) {
@@ -37,7 +36,7 @@ module.exports.getFilm = function getFilm(req, res, next) {
 };
 
 module.exports.getFilmsByOwner = function getFilmsByOwner(req, res, next) {
-	filmDao.getFilmsByOwner(req.user.id)
+	filmDao.getFilmsByOwner(req.user.id, req.query.page)
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()
@@ -49,6 +48,23 @@ module.exports.getFilmsByOwner = function getFilmsByOwner(req, res, next) {
 			res.status(500).send({ error: 'Internal server error. ' + e }).end()
 		});
 };
+
+
+module.exports.getFilmsToReview = function getFilmToReview(req, res, next) {
+	filmDao.getFilmsToReview(req.user.id, req.query.page)
+		.then(function (response) {
+			if (response)
+				res.status(200).send(response).end()
+			else
+				res.status(404).send({ error: 'No film found.' }).end()
+
+		})
+		.catch((e) => {
+			res.status(500).send({ error: 'Internal server error.' + e }).end()
+		});
+};
+
+
 
 module.exports.updateFilm = function updateFilm(req, res, next) {
 	if (isNaN(Number.parseInt(req.params.filmId))) {
@@ -89,21 +105,6 @@ module.exports.deleteFilm = function deleteFilm(req, res, next) {
 };
 
 
-// module.exports.getFilmToReview = function getFilmToReview(req, res, next) {
-// 	filmDao.getFilmToReview()
-// 		.then(function (response) {
-// 			if (response)
-// 				res.status(200).send(response).end()
-// 			else
-// 				res.status(404).send({ error: 'Film not found.' }).end()
-
-// 		})
-// 		.catch((e) => {
-// 			res.status(500).send({ error: 'Internal server error.' }).end()
-// 		});
-// };
-
-
 
 module.exports.getPublicFilm = function getPublicFilm(req, res, next) {
 	if (isNaN(Number.parseInt(req.params.filmId))) {
@@ -126,7 +127,7 @@ module.exports.getPublicFilm = function getPublicFilm(req, res, next) {
 };
 
 module.exports.getPublicFilms = function getPublicFilms(req, res, next) {
-	filmDao.getPublicFilms()
+	filmDao.getPublicFilms(req.query.page)
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()

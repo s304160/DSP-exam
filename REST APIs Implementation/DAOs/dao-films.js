@@ -4,6 +4,7 @@
 
 const db = require('../db');
 const dayjs = require("dayjs");
+const { port } = require('../index.js')
 
 const filters = {
 	'filter-all': { label: 'All', id: 'filter-all', filterFn: () => true },
@@ -29,30 +30,9 @@ exports.listFilters = () => {
 	return filters;
 }
 
-// This function retrieves the whole list of films from the database.
-exports.getFilmsByOwner = (userId, filter) => {
-	return new Promise((resolve, reject) => {
-		const sql = 'SELECT * FROM films WHERE owner = ?';
-		db.all(sql, [userId], (err, rows) => {
-			if (err) {
-				reject(err);
-				return;
-			}
 
-			const films = rows.map((e) => {
-				// WARN: the database returns only lowercase fields. So, to be compliant with the client-side, we convert "watchdate" to the camelCase version ("watchDate").
-				const film = Object.assign({}, e, { watchDate: dayjs(e.watchdate) });  // adding camelcase "watchDate"
-				delete film.watchdate;  // removing lowercase "watchdate"
-				return film;
-			});
+//#region GET
 
-			// WARN: if implemented as if(filters[filter]) returns true also for filter = 'constructor' but then .filterFn does not exists
-			if (filters.hasOwnProperty(filter))
-				resolve(films.filter(filters[filter].filterFn));
-			else resolve(films);
-		});
-	});
-};
 
 /**
  * This function retrieves a film owned by the logged user given its id.
@@ -79,6 +59,82 @@ exports.getFilm = (id, userId) => {
 		});
 	});
 };
+
+
+// This function retrieves the whole list of films from the database.
+exports.getFilmsByOwner = (userId, page = 0) => {
+	return new Promise((resolve, reject) => {
+		const sql =
+			`SELECT * FROM films
+			WHERE owner = ?
+			ORDER BY id
+			LIMIT 10 OFFSET ?`;
+		db.all(sql, [userId, 10 * page], (err, rows) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			if (rows === undefined || rows.length === 0)
+				resolve(null);
+
+			const films = rows.map((e) => {
+				const film = Object.assign({}, e, { watchDate: dayjs(e.watchdate) });
+				delete film.watchdate;
+
+				//attach URI
+				film['URI'] = port + '/film/' + film.id
+
+				return film;
+			});
+			resolve(films);
+		});
+	});
+};
+
+
+
+
+// This function retrieves the whole list of films from the database.
+exports.getFilmsToReview = (userId, page = 0) => {
+	return new Promise((resolve, reject) => {
+		const sql =
+			`SELECT * FROM films, reviews
+			WHERE 	reviewerId = ?
+			AND		completed = 0
+			ORDER BY id
+			LIMIT 10 OFFSET ?`;
+		db.all(sql, [userId, 10 * page], (err, rows) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			if (rows === undefined || rows.length === 0)
+				resolve(null);
+
+			const films = rows.map((e) => {
+				console.log(e.watchdate);
+				const film = Object.assign({}, e, { watchDate: dayjs(e.watchdate) });
+				delete film.watchdate;
+
+				//attach URI
+				film['URI'] = port + '/film/public/' + film.id
+
+				return film;
+			});
+			resolve(films);
+		});
+	});
+};
+
+
+//#endregion 
+
+
+
+//#region  CRUD
+
 
 
 /**
@@ -143,8 +199,9 @@ exports.deleteFilm = (filmId, userId) => {
 	});
 }
 
+//#endregion 
 
-
+//#region PUBLIC
 
 // This function retrieves a public film given its id.
 exports.getPublicFilm = (filmId) => {
@@ -169,14 +226,16 @@ exports.getPublicFilm = (filmId) => {
 
 
 // This function retrieves 10 public films.
-exports.getPublicFilms = () => {
+exports.getPublicFilms = (page = 0) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`SELECT id, title, owner, private FROM films WHERE
 			private = 0
-			LIMIT 10`;
+			ORDER BY id
+			LIMIT 10
+			OFFSET ?`;
 
-		db.all(sql, (err, rows) => {
+		db.all(sql, [10 * page], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
@@ -184,10 +243,17 @@ exports.getPublicFilms = () => {
 			if (rows === undefined || rows.length === 0)
 				resolve(null);
 
-			resolve(rows);
+			const films = rows.map((f) => {
+				//attach URI
+				f['URI'] = port + '/film/public/' + f.id
+
+				return f;
+			});
+			resolve(films);
 
 		});
 	});
 };
 
 
+//#endregion PUBLIC
