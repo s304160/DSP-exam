@@ -1,7 +1,7 @@
 'use strict';
 
-var utils = require('../utils/writer.js');
-var reviewDAO = require('../DAOs/dao-reviews.js');
+const utils = require('../utils/utils.js');
+const reviewDAO = require('../DAOs/dao-reviews.js');
 
 
 module.exports.getReviews = function getReviews(req, res, next) {

@@ -44,7 +44,54 @@ paths:
           description: Invalid username/password
       security: []
       x-swagger-router-controller: User
-  /film:
+  /films:
+    get:
+      tags:
+        - film
+      description:
+        Returns a page of 10 films, filtered depending on the query parameters.
+        Only one parameter between 'owned' and 'toReview' is allowed to be set to 1
+      operationId: getFilms
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          explode: false
+          schema:
+            type: integer
+            format: int64
+        - name: owned
+          in: query
+          description: If set to 1 retrieves a page of films owned by the logged user.
+          required: false
+          explode: false
+          schema:
+            type: integer
+            format: int64
+        - name: toReview
+          in: query
+          description: If set to 1 retrieves a page of films issued to be reviewed by the logged user.
+          required: false
+          explode: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                maxItems: 10
+                type: array
+                items:
+                  $ref: "/JSONSchemas/film.json"
+                x-content-type: application/json
+        "404":
+          description: No films found
+      security: []
+      x-swagger-router-controller: Film
     post:
       tags:
         - film
@@ -74,11 +121,11 @@ paths:
       security:
         - cookieAuth: []
       x-swagger-router-controller: Film
-  /film/{filmId}:
+  /films/{filmId}:
     get:
       tags:
         - film
-      description: Returns a film by Id owned by the logged user
+      description: Returns a film by Id if it is public or if it is owned by the logged user.
       operationId: getFilm
       parameters:
         - name: filmId
@@ -170,48 +217,17 @@ paths:
       security:
         - cookieAuth: []
       x-swagger-router-controller: Film
-  /films/public:
+  /films/{filmId}/reviews:
     get:
       tags:
-        - film
+        - review
         - noAuth
-      description: Returns a page of 10 public films
-      operationId: getPublicFilms
-      parameters:
-        - name: page
-          in: query
-          description: Page number
-          required: false
-          explode: false
-          schema:
-            type: integer
-            format: int64
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                maxItems: 10
-                type: array
-                items:
-                  $ref: "/JSONSchemas/film.json"
-                x-content-type: application/json
-        "404":
-          description: No films found
-      security: []
-      x-swagger-router-controller: Film
-  /film/public/{filmId}:
-    get:
-      tags:
-        - film
-        - noAuth
-      description: Returns a public film by Id
-      operationId: getPublicFilm
+      description: Returns all reviews of a public film
+      operationId: getReviewsByPublicFilmId
       parameters:
         - name: filmId
           in: path
-          description: ID of film to return
+          description: ID of film
           required: true
           style: simple
           explode: false
@@ -224,75 +240,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "/JSONSchemas/film.json"
-              examples:
-                publicFilmExample:
-                  $ref: "#/components/examples/publicFilmRes"
-
+                maxItems: 10
+                type: array
+                items:
+                  $ref: "/JSONSchemas/review.json"
+                x-content-type: application/json
         "400":
           description: Invalid ID
+        "401":
+          description: Unauthorized - the film is not public
         "404":
           description: Film not found
       security: []
-      x-swagger-router-controller: Film
-  /films/owned:
-    get:
-      tags:
-        - film
-      description: Returns the list of films owned by the user
-      operationId: getFilmsByOwner
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                maxItems: 10
-                type: array
-                items:
-                  $ref: "/JSONSchemas/film.json"
-                x-content-type: application/json
-        "401":
-          description: Unauthorized
-        "404":
-          description: No films found
-      security:
-        - cookieAuth: []
-      x-swagger-router-controller: Film
-  /films/toReview:
-    get:
-      tags:
-        - film
-      description: Returns a page of 10 films the user has been invited to review
-      operationId: getFilmToReview
-      parameters:
-        - name: page
-          in: query
-          description: Page number
-          required: false
-          explode: false
-          schema:
-            type: integer
-            format: int64
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                maxItems: 10
-                type: array
-                items:
-                  $ref: "/JSONSchemas/film.json"
-                x-content-type: application/json
-        "401":
-          description: Unauthorized
-        "404":
-          description: No films found
-      security:
-        - cookieAuth: []
-      x-swagger-router-controller: Film
-  /review:
+      x-swagger-router-controller: Review
     post:
       tags:
         - review
@@ -326,25 +286,51 @@ paths:
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
-  /automatic/review/{filmId}:
-    post:
+  /films/{filmId}/reviews/{reviewerId}:
+    get:
       tags:
         - review
-      description: Automatically issue reviews for a film with no invitation in a way that the invitations to the users are balanced
-      operationId: issueAutomaticallyReview
+        - noAuth
+      description: Returns one review of a public film
+      operationId: getReviewOfFilm
+      parameters:
+        - name: filmId
+          in: path
+          description: ID of film
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+        - name: reviewId
+          in: path
+          description: ID of review
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
       responses:
         "200":
           description: successful operation
+          content:
+            application/json:
+              schema:
+                maxItems: 10
+                type: array
+                items:
+                  $ref: "/JSONSchemas/review.json"
+                x-content-type: application/json
         "400":
-          description: Invalid input
+          description: Invalid ID
         "401":
-          description: Unauthorized
-        "422":
-          description: Validation exception
-      security:
-        - cookieAuth: []
+          description: Unauthorized - the film is not public
+        "404":
+          description: Film not found or review not found
+      security: []
       x-swagger-router-controller: Review
-  /review/{filmId}/{reviewerId}:
     put:
       tags:
         - review
@@ -412,86 +398,23 @@ paths:
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
-  /reviews/public/{filmId}:
-    get:
+  /films/{filmId}/autoReviews:
+    post:
       tags:
         - review
-        - noAuth
-      description: Returns all reviews of a public film
-      operationId: getReviewsByPublicFilmId
-      parameters:
-        - name: filmId
-          in: path
-          description: ID of film
-          required: true
-          style: simple
-          explode: false
-          schema:
-            type: integer
-            format: int64
+      description: Automatically issue reviews for a film with no invitation in a way that the invitations to the users are balanced
+      operationId: issueAutomaticallyReview
       responses:
         "200":
           description: successful operation
-          content:
-            application/json:
-              schema:
-                maxItems: 10
-                type: array
-                items:
-                  $ref: "/JSONSchemas/review.json"
-                x-content-type: application/json
         "400":
-          description: Invalid ID
+          description: Invalid input
         "401":
-          description: Unauthorized - the film is not public
-        "404":
-          description: Film not found
-      security: []
-      x-swagger-router-controller: Review
-  /reviews/public/{filmId}/{reviewId}:
-    get:
-      tags:
-        - review
-        - noAuth
-      description: Returns one review of a public film
-      operationId: getReviewByPublicFilmId
-      parameters:
-        - name: filmId
-          in: path
-          description: ID of film
-          required: true
-          style: simple
-          explode: false
-          schema:
-            type: integer
-            format: int64
-        - name: reviewId
-          in: path
-          description: ID of review
-          required: true
-          style: simple
-          explode: false
-          schema:
-            type: integer
-            format: int64
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                maxItems: 10
-                type: array
-                items:
-                  $ref: "/JSONSchemas/review.json"
-                x-content-type: application/json
-        "400":
-          description: Invalid ID
-        "401":
-          description: Unauthorized - the film is not public
-        "404":
-          description: Film not found or review not found
-      security: []
+          description: Unauthorized
+        "422":
+          description: Validation exception
+      security:
+        - cookieAuth: []
       x-swagger-router-controller: Review
   /like/{filmId}:
     get:

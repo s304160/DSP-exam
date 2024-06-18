@@ -1,9 +1,9 @@
 'use strict';
 
-const { passport } = require('../components/passport.js');
+const { passport } = require('../utils/passport.js');
 const { body, validationResult, matchedData } = require('express-validator');
 // const userSchema = require('../schemas/user.json')
-const utils = require('../utils/writer.js');
+// const utils = require('../utils/utils.js');
 
 
 module.exports.userValidation = () =>

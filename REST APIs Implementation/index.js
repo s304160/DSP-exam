@@ -24,7 +24,7 @@ const app = expressAppConfig.getApp();
 
 
 /* --- PASSPORT --- */
-const { passport } = require('./components/passport')
+const { passport } = require('./utils/passport')
 
 // Creating the session
 app.use(session({

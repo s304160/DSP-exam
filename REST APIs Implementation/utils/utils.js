@@ -1,9 +1,28 @@
+'use strict'
+
+/* PASSPORT */
+
+module.exports.isLoggedIn = function (req, res, next) {
+	if (req.isAuthenticated()) {
+		return next();
+	}
+	res.status(401).json({ error: 'Not authorized' }).end();
+	return false;
+}
+
+
+
+
+
+/* RESPONSE */
+
+
 let ResponsePayload = function (code, payload) {
 	this.code = code;
 	this.payload = payload;
 }
 
-exports.respondWithCode = function (code, payload) {
+module.exports.respondWithCode = function (code, payload) {
 	return new ResponsePayload(code, payload);
 }
 

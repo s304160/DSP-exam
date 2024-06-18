@@ -1,42 +1,53 @@
 // 'use strict';
 
-const utils = require('../utils/writer.js');
-const filmDao = require('../DAOs/dao-films.js');
 
-module.exports.createFilm = function createFilm(req, res, next) {
-	filmDao.createFilm(req.body)
-		.then(function (response) {
-			if (response)
-				res.status(201).send(response).end()
-
-		})
-		.catch((e) => {
-			res.status(500).send({ error: 'Internal server error. ' + e }).end()
-		});
-};
+const { isLoggedIn, writeJson } = require('../utils/utils.js');
+const filmDAO = require('../DAOs/dao-films.js');
 
 
-module.exports.getFilm = function getFilm(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))) {
-		res.status(400).send({ error: 'Invalid Id.' }).end()
+//#region /films
+
+module.exports.getFilms = function getFilms(req, res, next) {
+
+
+	console.log(JSON.stringify(req.query))
+
+	if (req.query.owned === undefined
+		&& req.query.toReview === undefined) {
+
+		return getPublicFilmList(req, res, next)
+	}
+
+
+	if (req.query.owned !== undefined
+		&& req.query.toReview !== undefined) {
+		res.status(400).send({ error: "Too many parameters. " }).end();
 		return;
 	}
 
-	filmDao.getFilm(req.params.filmId, req.user.id)
-		.then(function (response) {
-			if (response)
-				res.status(200).send(response).end()
-			else
-				res.status(404).send({ error: 'Film not found.' }).end()
+	if (isNaN(parseInt(req.query.owned))
+		|| isNaN(parseInt(req.query.toReview))) {
+		res.status(400).send({ error: "Invalid parameters. " }).end();
+		return;
+	}
 
-		})
-		.catch((e) => {
-			res.status(500).send({ error: 'Internal server error. ' + e }).end()
-		});
+
+
+	if (isLoggedIn(req, res, next)) {
+		if (parseInt(req.query.owned) === 1)
+			return getOwnedFilmList(req, res, next)
+
+		else if (parseInt(req.query.toReview) === 1)
+			return getFilmsToReviewList(req, res, next)
+
+	}
+
 };
 
-module.exports.getFilmsByOwner = function getFilmsByOwner(req, res, next) {
-	filmDao.getFilmsByOwner(req.user.id, req.query.page)
+
+
+const getPublicFilmList = function (req, res, next) {
+	filmDAO.getPublicFilmList(req.query.page)
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()
@@ -49,9 +60,24 @@ module.exports.getFilmsByOwner = function getFilmsByOwner(req, res, next) {
 		});
 };
 
+const getOwnedFilmList = function (req, res, next) {
+	filmDAO.getOwnedFilmList(req.user.id, req.params.page)
+		.then(function (response) {
+			if (response)
+				res.status(200).send(response).end()
+			else
+				res.status(404).send({ error: 'No film found.' }).end()
 
-module.exports.getFilmsToReview = function getFilmToReview(req, res, next) {
-	filmDao.getFilmsToReview(req.user.id, req.query.page)
+		})
+		.catch((e) => {
+			res.status(500).send({ error: 'Internal server error. ' + e }).end()
+		});
+
+}
+
+
+const getFilmsToReviewList = function getFilmToReview(req, res, next) {
+	filmDAO.getFilmsToReviewList(req.user.id, req.query.page)
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()
@@ -66,13 +92,91 @@ module.exports.getFilmsToReview = function getFilmToReview(req, res, next) {
 
 
 
-module.exports.updateFilm = function updateFilm(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))) {
+
+module.exports.createFilm = function createFilm(req, res, next) {
+	filmDAO.createFilm(req.body)
+		.then(function (response) {
+			if (response)
+				res.status(201).send(response).end()
+
+		})
+		.catch((e) => {
+			res.status(500).send({ error: 'Internal server error. ' + e }).end()
+		});
+};
+
+
+//#endregion
+
+//#region /films/{filmId}  GET
+
+
+module.exports.getFilm = function getFilm(req, res, next) {
+	if (isNaN(parseInt(req.params.filmId))) {
 		res.status(400).send({ error: 'Invalid Id.' }).end()
 		return;
 	}
 
-	filmDao.updateFilm(req.params.filmId, req.user.id, req.body)
+	if (isLoggedIn(req, res, next)) {
+		getOwnedFilm(req, res, next);
+	}
+	else {
+		getPublicFilm(req, res, next);
+	}
+
+
+};
+
+
+
+const getOwnedFilm = function (req, res, next) {
+	filmDAO.getOwnedFilm(req.params.filmId, req.user.id)
+		.then(function (response) {
+			if (response)
+				res.status(200).send(response).end()
+			else
+				res.status(404).send({ error: 'Film not found.' }).end()
+
+		})
+		.catch((e) => {
+			res.status(500).send({ error: 'Internal server error. ' + e }).end()
+		});
+}
+
+
+
+const getPublicFilm = function (req, res, next) {
+	filmDAO.getPublicFilm(req.params.filmId)
+		.then(function (response) {
+			if (response) {
+				res.status(200).send(response).end()
+			}
+			else
+				res.status(404).send({ error: 'Film not found.' }).end()
+
+		})
+		.catch((e) => {
+			res.status(500).send({ error: 'Internal server error. ' + e }).end()
+		});
+};
+
+
+
+
+//#endregion
+
+//#region /films/{filmId} 
+
+
+
+
+module.exports.updateFilm = function updateFilm(req, res, next) {
+	if (isNaN(parseInt(req.params.filmId))) {
+		res.status(400).send({ error: 'Invalid Id.' }).end()
+		return;
+	}
+
+	filmDAO.updateFilm(req.params.filmId, req.user.id, req.body)
 		.then(function (response) {
 			if (response)
 				res.status(204).send(response).end()
@@ -86,12 +190,12 @@ module.exports.updateFilm = function updateFilm(req, res, next) {
 };
 
 module.exports.deleteFilm = function deleteFilm(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))) {
+	if (isNaN(parseInt(req.params.filmId))) {
 		res.status(400).send({ error: 'Invalid Id.' }).end()
 		return;
 	}
 
-	filmDao.deleteFilm(req.params.filmId, req.user.id)
+	filmDAO.deleteFilm(req.params.filmId, req.user.id)
 		.then(function (response) {
 			if (response)
 				res.status(204).send("Film successfully deleted.").end()
@@ -106,37 +210,7 @@ module.exports.deleteFilm = function deleteFilm(req, res, next) {
 
 
 
-module.exports.getPublicFilm = function getPublicFilm(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))) {
-		res.status(400).send({ error: 'Invalid Id.' }).end()
-		return;
-	}
 
-	filmDao.getPublicFilm(req.params.filmId)
-		.then(function (response) {
-			if (response) {
-				res.status(200).send(response).end()
-			}
-			else
-				res.status(404).send({ error: 'Film not found.' }).end()
 
-		})
-		.catch((e) => {
-			res.status(500).send({ error: 'Internal server error. ' + e }).end()
-		});
-};
-
-module.exports.getPublicFilms = function getPublicFilms(req, res, next) {
-	filmDao.getPublicFilms(req.query.page)
-		.then(function (response) {
-			if (response)
-				res.status(200).send(response).end()
-			else
-				res.status(404).send({ error: 'No film found.' }).end()
-
-		})
-		.catch((e) => {
-			res.status(500).send({ error: 'Internal server error. ' + e }).end()
-		});
-};
+//#endregion
 

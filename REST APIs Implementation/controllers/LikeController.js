@@ -1,4 +1,4 @@
-const utils = require('../utils/writer.js');
+const { isLoggedIn, writeJson } = require('../utils/utils.js');
 const likeDAO = require('../DAOs/dao-like.js');
 
 

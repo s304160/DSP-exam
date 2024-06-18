@@ -31,30 +31,34 @@ exports.listFilters = () => {
 }
 
 
-//#region GET
+//#region GET multiple
 
 
-/**
- * This function retrieves a film owned by the logged user given its id.
- */
-exports.getFilm = (id, userId) => {
+// This function retrieves 10 public films.
+exports.getPublicFilmList = (page = 0) => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM films WHERE
-			id = ? AND owner = ?`;
+			`SELECT id, title, owner, private FROM films WHERE
+			private = 0
+			ORDER BY id
+			LIMIT 10
+			OFFSET ?`;
 
-		db.get(sql, [id, userId], (err, row) => {
+		db.all(sql, [10 * page], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row === undefined)
+			if (rows === undefined || rows.length === 0)
 				resolve(null);
 
-			// WARN: database is case insensitive. Converting "watchDate" to camel case format
-			const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
-			delete film.watchdate;  // removing lowercase "watchdate"
-			resolve(film);
+			const films = rows.map((f) => {
+				//attach URI
+				f['URI'] = port + '/film/public/' + f.id
+
+				return f;
+			});
+			resolve(films);
 
 		});
 	});
@@ -62,7 +66,7 @@ exports.getFilm = (id, userId) => {
 
 
 // This function retrieves the whole list of films from the database.
-exports.getFilmsByOwner = (userId, page = 0) => {
+exports.getOwnedFilmList = (userId, page = 0) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`SELECT * FROM films
@@ -93,10 +97,8 @@ exports.getFilmsByOwner = (userId, page = 0) => {
 };
 
 
-
-
 // This function retrieves the whole list of films from the database.
-exports.getFilmsToReview = (userId, page = 0) => {
+exports.getFilmsToReviewList = (userId, page = 0) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`SELECT * FROM films, reviews
@@ -127,6 +129,68 @@ exports.getFilmsToReview = (userId, page = 0) => {
 		});
 	});
 };
+
+
+
+
+
+//#endregion
+
+
+
+//#region GET single
+
+
+// This function retrieves a public film given its id.
+exports.getPublicFilm = (filmId) => {
+	return new Promise((resolve, reject) => {
+		const sql =
+			`SELECT id, title, owner, private FROM films WHERE
+			id = ? AND private = 0`;
+
+		db.get(sql, [filmId], (err, row) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+			if (row === undefined) {
+				resolve(null);
+			}
+
+			resolve(row)
+		});
+	});
+};
+
+
+
+/**
+ * This function retrieves a film owned by the logged user given its id.
+ */
+exports.getOwnedFilm = (id, userId) => {
+	return new Promise((resolve, reject) => {
+		const sql =
+			`SELECT * FROM films WHERE
+			id = ? AND owner = ?`;
+
+		db.get(sql, [id, userId], (err, row) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+			if (row === undefined)
+				resolve(null);
+
+			// WARN: database is case insensitive. Converting "watchDate" to camel case format
+			const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
+			delete film.watchdate;  // removing lowercase "watchdate"
+			resolve(film);
+
+		});
+	});
+};
+
+
 
 
 //#endregion 
@@ -201,59 +265,3 @@ exports.deleteFilm = (filmId, userId) => {
 
 //#endregion 
 
-//#region PUBLIC
-
-// This function retrieves a public film given its id.
-exports.getPublicFilm = (filmId) => {
-	return new Promise((resolve, reject) => {
-		const sql =
-			`SELECT id, title, owner, private FROM films WHERE
-			id = ? AND private = 0`;
-
-		db.get(sql, [filmId], (err, row) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-			if (row === undefined) {
-				resolve(null);
-			}
-
-			resolve(row)
-		});
-	});
-};
-
-
-// This function retrieves 10 public films.
-exports.getPublicFilms = (page = 0) => {
-	return new Promise((resolve, reject) => {
-		const sql =
-			`SELECT id, title, owner, private FROM films WHERE
-			private = 0
-			ORDER BY id
-			LIMIT 10
-			OFFSET ?`;
-
-		db.all(sql, [10 * page], (err, rows) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-			if (rows === undefined || rows.length === 0)
-				resolve(null);
-
-			const films = rows.map((f) => {
-				//attach URI
-				f['URI'] = port + '/film/public/' + f.id
-
-				return f;
-			});
-			resolve(films);
-
-		});
-	});
-};
-
-
-//#endregion PUBLIC

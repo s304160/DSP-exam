@@ -1,4 +1,6 @@
 {
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "userSchema",
 	"type": "object",
 	"properties": {
 		"id": {
@@ -12,7 +14,7 @@
 			"format": "email"
 		},
 		"password": {
-			"type": "password",
+			"type": "string",
 			"minLength": 6,
 			"maxLength": 20
 		}
