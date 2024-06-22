@@ -61,7 +61,7 @@ app.get('/films/:filmId/reviews', reviewController.getReviews);
 app.get('/films/:filmId/reviews/:reviewerId', reviewController.getReview);
 
 app.post('/films/:filmId/reviews', isLoggedIn, reviewController.issueReview);
-app.post('/films/:filmId/automatic', isLoggedIn, reviewController.issueAutomaticReviews);
+app.post('/films/:filmId/automaticReviews', isLoggedIn, reviewController.issueAutomaticReviews);
 app.put('/films/:filmId/reviews/:reviewerId', isLoggedIn, reviewController.updateReview);
 app.delete('/films/:filmId/reviews/:reviewerId', isLoggedIn, reviewController.deleteReview);
 

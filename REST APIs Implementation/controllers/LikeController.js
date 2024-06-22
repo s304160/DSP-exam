@@ -31,7 +31,7 @@ module.exports.addLike = function addLike(req, res, next) {
 	likeDAO.addLike(req.params.filmId, req.user.id)
 		.then(function (response) {
 			if (response)
-				res.status(201).send("Success").end()
+				res.status(201).send({ message: "Success" }).end()
 			else if (response === null)
 				res.status(404).send({ error: 'No film found.' }).end()
 			else

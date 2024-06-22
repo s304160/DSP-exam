@@ -44,7 +44,7 @@ module.exports.getReview = function getReview(req, res, next) {
 };
 
 module.exports.issueReview = function issueReview(req, res, next) {
-	reviewDAO.issueReview(req.body.review, req.body.users)
+	reviewDAO.issueReview(req.params.filmId, req.body.reviewers)
 		.then(function (response) {
 			if (response)
 				res.status(201).send(response).end()
@@ -60,10 +60,11 @@ module.exports.issueAutomaticReviews = function issueAutomaticReviews(req, res, 
 		res.status(400).send({ error: 'Invalid Id.' }).end()
 		return;
 	}
+
 	reviewDAO.issueAutomaticReviews(req.params.filmId)
 		.then(function (response) {
 			if (response)
-				res.status(204).send(response).end()
+				res.status(201).send(response).end()
 			else
 				res.status(404).send({ error: 'Film not found.' }).end()
 
@@ -75,28 +76,47 @@ module.exports.issueAutomaticReviews = function issueAutomaticReviews(req, res, 
 
 
 module.exports.updateReview = function updateReview(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))) {
-		res.status(400).send({ error: 'Invalid Id.' }).end()
+	if (isNaN(Number.parseInt(req.params.filmId))
+		|| isNaN(Number.parseInt(req.params.reviewerId))) {
+		res.status(400).send({ error: 'Invalid parameters.' }).end()
 		return;
 	}
 
-	reviewDAO.updateReview(req.params.filmId, req.user.id, req.body)
+	if (req.params.reviewerId !== req.user.id) {
+		res.status(401).send({ error: 'You cannot modify a review not assigned to you.' }).end()
+		return;
+	}
+
+
+	reviewDAO.getReview(req.params.filmId, req.user.id)
 		.then(function (response) {
-			if (response)
-				res.status(204).send(response).end()
+			if (response) {
+				reviewDAO.updateReview(req.params.filmId, req.user.id, req.body)
+					.then(function (response) {
+						if (response)
+							res.status(204).send(response).end()
+					})
+					.catch((e) => {
+						res.status(500).send({ error: 'Internal server error. ' + e }).end()
+					});
+			}
+			else if (response === null)
+				res.status(404).send({ error: 'Review not found.' }).end()
 			else
-				res.status(404).send({ error: 'Film not found.' }).end()
+				res.status(500).send({ error: 'Internal server error. ' + e }).end()
 
 		})
 		.catch((e) => {
 			res.status(500).send({ error: 'Internal server error. ' + e }).end()
 		});
+
+
 };
 
 
 module.exports.deleteReview = function deleteReview(req, res, next) {
-	if (isNaN(Number.parseInt(req.params.filmId))
-		|| isNaN(Number.parseInt(req.params.reviewerId))) {
+	if (isNaN(parseInt(req.params.filmId))
+		|| isNaN(parseInt(req.params.reviewerId))) {
 		res.status(400).send({ error: 'Invalid parameters.' }).end()
 		return;
 	}
@@ -104,9 +124,11 @@ module.exports.deleteReview = function deleteReview(req, res, next) {
 	reviewDAO.deleteReview(req.params.filmId, req.params.reviewerId)
 		.then(function (response) {
 			if (response)
-				res.status(204).send("Review successfully deleted.").end()
+				res.status(204).send({ message: "Review successfully deleted." }).end()
+			else if (response === null)
+				res.status(404).send({ error: 'Review or film not found.' }).end()
 			else
-				res.status(404).send({ error: 'Review not found.' }).end()
+				res.status(401).send(response).end()
 
 		})
 		.catch((e) => {

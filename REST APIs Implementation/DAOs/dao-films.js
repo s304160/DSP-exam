@@ -54,7 +54,8 @@ exports.getPublicFilmList = (page = 1) => {
 
 			const films = rows.map((f) => {
 				//attach URI
-				f['URI'] = port + '/films/' + f.id
+				f['filmURI'] = port + '/films/' + f.id
+				f['filmReviewsURI'] = port + '/films/' + f.id + '/reviews'
 
 				return f;
 			});
@@ -87,7 +88,8 @@ exports.getOwnedFilmList = (userId, page = 0) => {
 				// delete film.watchdate;
 
 				//attach URI
-				f['URI'] = port + '/films/' + f.id
+				f['filmURI'] = port + '/films/' + f.id
+				f['filmReviewsURI'] = port + '/films/' + f.id + '/reviews'
 
 				return f;
 			});
@@ -120,7 +122,8 @@ exports.getFilmsToReviewList = (userId, page = 0) => {
 				delete film.watchdate;
 
 				//attach URI
-				film['URI'] = port + '/films/' + film.id
+				film['filmURI'] = port + '/films/' + film.id
+				f['filmReviewsURI'] = port + '/films/' + f.id + '/reviews'
 
 				return film;
 			});
@@ -184,12 +187,16 @@ exports.getOwnedFilm = (id, userId) => {
 					id: row.id,
 					title: row.title,
 					owner: row.owner,
-					private: row.private
+					private: row.private,
+					filmURI: port + '/films/' + row.id,
+					filmReviewsURI: port + '/films/' + row.id + '/reviews'
 				})
 				return;
 			}
 
 			if (row.owner === userId) {
+				row['filmURI'] = port + '/films/' + row.id
+				row['filmReviewsURI'] = port + '/films/' + row.id + '/reviews'
 				resolve(row);
 				return;
 			}

@@ -32,12 +32,6 @@ module.exports.getFilms = function getFilms(req, res, next) {
 	}
 
 
-	// if (owned !== undefined && toReview !== undefined) {
-	// 	res.status(400).send({ error: "Too many parameters. " }).end();
-	// 	return;
-	// }
-
-
 	if (!isLoggedIn(req)) {
 		res.status(401).json({ error: 'Not authorized' }).end();
 		return;

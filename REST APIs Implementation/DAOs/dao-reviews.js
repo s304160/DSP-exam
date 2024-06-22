@@ -28,14 +28,16 @@ exports.getReviews = (filmId) => {
 
 			const reviews = rows.map((r) => {
 				if (r.completed) {
-					r['URI'] = port + '/films/' + filmId + '/reviews/' + r.reviewerId
+					r['reviewURI'] = port + '/films/' + filmId + '/reviews/' + r.reviewerId
+
 					return r;
 				}
 				else
 					return {
 						filmId: r.filmId,
 						reviewerId: r.reviewerId,
-						completed: r.completed
+						completed: r.completed,
+						reviewURI: port + '/films/' + filmId + '/reviews/' + r.reviewerId
 					};
 			})
 			resolve(reviews);
@@ -61,8 +63,7 @@ exports.getReview = (filmId, reviewerId) => {
 				return;
 			}
 
-			// const review = Object.assign({}, row, { reviewDate: row.reviewdate });  
-			// delete review.reviewdate;  
+			row['reviewURI'] = port + '/films/' + filmId + '/reviews/' + row.reviewerId
 			resolve(row);
 		});
 	});
@@ -70,23 +71,27 @@ exports.getReview = (filmId, reviewerId) => {
 
 
 /**
- * This function adds a new review in the database. 
+ * This function adds a list of reviews in the database, each associated to a user in the list passed as parameter.
  */
-exports.issueReview = (review, users) => {
+exports.issueReview = (filmId, reviewers) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`INSERT INTO reviews (filmId, reviewerId, completed)
 			VALUES(?, ?, ?)`;
 
-		for (u in users) {
-			db.run(sql, [review.filmId, u, false], function (err) {
+		let result = [];
+
+		reviewers.forEach(r => {
+			db.run(sql, [filmId, r, false], function (err) {
 				if (err) {
 					reject(err);
 					return;
 				}
-				resolve(true)
+				result.push({ filmId: filmId, reviewerId: r, completed: false })
 			});
-		}
+		});
+
+		resolve(result)
 	});
 };
 
@@ -146,15 +151,17 @@ exports.issueAutomaticReviews = (filmId) => {
 			`INSERT INTO reviews (filmId, reviewerId, completed)
 			VALUES(?, ?, ?)`;
 
-		for (u in filteredUsers) {
-			db.run(sql, [filmId, u, false], (err) => {
+		filteredUsers.forEach(u => {
+			db.run(sql, [filmId, u, false], function (err) {
 				if (err) {
 					reject(err);
 					return;
 				}
+				result.push({ filmId: filmId, reviewerId: r, completed: false })
 			});
-		}
-		resolve(filteredUsers);
+		});
+
+		resolve({ users: filteredUsers });
 	});
 };
 
@@ -182,8 +189,37 @@ exports.updateReview = (filmId, reviewerId, review) => {
 };
 
 // This function deletes an existing film given its id.
-exports.deleteReview = (filmId, reviewerId) => {
+exports.deleteReview = (filmId, reviewerId, currentUser) => {
 	return new Promise((resolve, reject) => {
+
+
+		const check =
+			`SELECT owner, completed FROM films, reviews
+			WHERE films.id = reviews.filmId
+			AND films.id = ?
+			AND reviews.reviewerId = ?`;
+
+		db.get(check, [filmId], (err, row) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+			if (row === undefined) {
+				resolve(null);
+				return;
+			}
+			if (row.owner !== currentUser) {
+				resolve({ error: 'You cannot delete a review of a film you do not own.' });
+				return;
+			}
+			if (row.completed) {
+				resolve({ error: 'You cannot delete a completed review.' });
+				return;
+			}
+		});
+
+
+
 		const sql =
 			`DELETE FROM reviews
 			WHERE filmId = ? AND reviewerId = ? AND completed = 0`;
@@ -192,7 +228,8 @@ exports.deleteReview = (filmId, reviewerId) => {
 				reject(err);
 				return;
 			}
-			if (this.changes === 0) {
+
+			if (this.changes === undefined || this.changes === 0) {
 				resolve(null)
 				return;
 			}
