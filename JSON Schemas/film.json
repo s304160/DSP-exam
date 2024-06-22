@@ -22,9 +22,9 @@
 				}
 			}
 		},
-		"requiredfilm": {
+		"requiredFilm": {
 			"$schema": "http://json-schema.org/draft-07/schema#",
-			"$id": "requiredfilm",
+			"$id": "requiredFilm",
 			"type": "object",
 			"properties": {
 				"id": {
@@ -74,7 +74,7 @@
 	"type": "object",
 	"oneOf": [
 		{
-			"$ref": "#/definitions/requiredfilm"
+			"$ref": "#/definitions/requiredFilm"
 		}
 	]
 }

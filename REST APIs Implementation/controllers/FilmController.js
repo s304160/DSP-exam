@@ -1,46 +1,61 @@
 // 'use strict';
 
 
-const { isLoggedIn, writeJson } = require('../utils/utils.js');
+// const { isLoggedIn, writeJson } = require('../utils/utils.js');
 const filmDAO = require('../DAOs/dao-films.js');
+
+const { Validator, ValidationError } = require("express-json-validator-middleware");
+
+
+const isLoggedIn = function (req) {
+	if (req.isAuthenticated())
+		return true;
+
+	return false;
+}
+
+
 
 
 //#region /films
 
 module.exports.getFilms = function getFilms(req, res, next) {
 
-
 	console.log(JSON.stringify(req.query))
 
-	if (req.query.owned === undefined
-		&& req.query.toReview === undefined) {
 
+	let owned = req.query.owned;
+	let toReview = req.query.toReview;
+
+	if (owned === undefined && toReview === undefined) {
 		return getPublicFilmList(req, res, next)
 	}
 
 
-	if (req.query.owned !== undefined
-		&& req.query.toReview !== undefined) {
-		res.status(400).send({ error: "Too many parameters. " }).end();
+	// if (owned !== undefined && toReview !== undefined) {
+	// 	res.status(400).send({ error: "Too many parameters. " }).end();
+	// 	return;
+	// }
+
+
+	if (!isLoggedIn(req)) {
+		res.status(401).json({ error: 'Not authorized' }).end();
 		return;
 	}
 
-	if (isNaN(parseInt(req.query.owned))
-		|| isNaN(parseInt(req.query.toReview))) {
-		res.status(400).send({ error: "Invalid parameters. " }).end();
+
+	if (owned !== undefined && parseInt(owned) === 1) {
+		return getOwnedFilmList(req, res, next)
+	}
+	else if (toReview !== undefined && parseInt(toReview) === 1) {
+		return getFilmsToReviewList(req, res, next)
+	}
+	else {
+		res.status(400).send({ error: "Invalid parameters." }).end();
 		return;
 	}
 
 
-
-	if (isLoggedIn(req, res, next)) {
-		if (parseInt(req.query.owned) === 1)
-			return getOwnedFilmList(req, res, next)
-
-		else if (parseInt(req.query.toReview) === 1)
-			return getFilmsToReviewList(req, res, next)
-
-	}
 
 };
 
@@ -91,7 +106,7 @@ const getFilmsToReviewList = function getFilmToReview(req, res, next) {
 };
 
 
-
+/* --- */
 
 module.exports.createFilm = function createFilm(req, res, next) {
 	filmDAO.createFilm(req.body)
@@ -117,7 +132,7 @@ module.exports.getFilm = function getFilm(req, res, next) {
 		return;
 	}
 
-	if (isLoggedIn(req, res, next)) {
+	if (isLoggedIn(req)) {
 		getOwnedFilm(req, res, next);
 	}
 	else {
@@ -134,8 +149,10 @@ const getOwnedFilm = function (req, res, next) {
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()
-			else
+			else if (response === null)
 				res.status(404).send({ error: 'Film not found.' }).end()
+			else
+				res.status(401).send({ error: 'The film is private and you are not the owner.' }).end()
 
 		})
 		.catch((e) => {
@@ -176,17 +193,45 @@ module.exports.updateFilm = function updateFilm(req, res, next) {
 		return;
 	}
 
-	filmDAO.updateFilm(req.params.filmId, req.user.id, req.body)
+	filmDAO.getOwnedFilm(req.params.filmId, req.user.id)
 		.then(function (response) {
-			if (response)
-				res.status(204).send(response).end()
-			else
+			if (response) {
+				if (response.owner !== req.user.id) {
+					res.status(401).send({ error: 'You are not the owner of the film.' }).end()
+					return;
+				}
+
+				if (!response.private) {
+					if (req.body.rating !== undefined
+						|| req.body.favorite !== undefined
+						|| req.body.watchDate !== undefined
+					) {
+						res.status(401).send({ error: 'The film is not private, you cannot modify the specified properties.' }).end()
+						return;
+					}
+				}
+
+
+				filmDAO.updateFilm(req.params.filmId, req.user.id, req.body)
+					.then(function (response) {
+						if (response)
+							res.status(204).send(response).end()
+					})
+					.catch((e) => {
+						res.status(500).send({ error: 'Internal server error. ' + e }).end()
+					});
+			}
+			else if (response === null)
 				res.status(404).send({ error: 'Film not found.' }).end()
+			else
+				res.status(500).send({ error: 'Internal server error. ' + e }).end()
 
 		})
 		.catch((e) => {
 			res.status(500).send({ error: 'Internal server error. ' + e }).end()
 		});
+
+
 };
 
 module.exports.deleteFilm = function deleteFilm(req, res, next) {

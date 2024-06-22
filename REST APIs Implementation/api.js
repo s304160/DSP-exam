@@ -13,6 +13,8 @@ const likeController = require('./controllers/LikeController');
 const { Validator, ValidationError } = require('express-json-validator-middleware');
 const userSchema = require('../JSON Schemas/user.json');
 const filmSchema = require('../JSON Schemas/film.json');
+const filmParamsSchema = require('../JSON Schemas/filmParams.json');
+const filmUpdateSchema = require('../JSON Schemas/filmUpdate.json');
 const reviewSchema = require('../JSON Schemas/review.json');
 
 const validator = new Validator();
@@ -22,6 +24,9 @@ addFormats(validator.ajv)
 
 
 const filmValidation = validator.validate({ body: filmSchema })
+const filmParamsValidation = validator.validate({ query: filmParamsSchema })
+const filmUpdateValidation = validator.validate({ body: filmUpdateSchema })
+
 
 
 
@@ -29,6 +34,7 @@ const filmValidation = validator.validate({ body: filmSchema })
 
 // app.post('/user/login', userController.userValidation(), userController.userLogin);
 app.post('/user/login', userController.userLogin);
+app.post('/user/logout', isLoggedIn, userController.userLogout);
 
 
 /*** Defining authentication verification middleware ***/
@@ -43,34 +49,29 @@ app.post('/films', isLoggedIn, (req, res, next) => {
 	next();
 }, filmValidation, filmController.createFilm);
 
-app.get('/films', filmController.getFilms);
+app.get('/films', filmParamsValidation, filmController.getFilms);
 app.get('/films/:filmId', filmController.getFilm);
-app.put('/films/:filmId', isLoggedIn, filmController.updateFilm);
+app.put('/films/:filmId', isLoggedIn, filmUpdateValidation, filmController.updateFilm);
 app.delete('/films/:filmId', isLoggedIn, filmController.deleteFilm);
 
-// app.get('/films/owned', isLoggedIn, filmController.getFilmsByOwner);
-// app.get('/films/toReview', isLoggedIn, filmController.getFilmsToReview);
-
-// app.get('/films/public', filmController.getPublicFilms);
-// app.get('/film/public/:filmId', filmController.getPublicFilm);
 
 /* --- Review API --- */
+
+app.get('/films/:filmId/reviews', reviewController.getReviews);
+app.get('/films/:filmId/reviews/:reviewerId', reviewController.getReview);
 
 app.post('/films/:filmId/reviews', isLoggedIn, reviewController.issueReview);
 app.post('/films/:filmId/automatic', isLoggedIn, reviewController.issueAutomaticReviews);
 app.put('/films/:filmId/reviews/:reviewerId', isLoggedIn, reviewController.updateReview);
 app.delete('/films/:filmId/reviews/:reviewerId', isLoggedIn, reviewController.deleteReview);
 
-app.get('/films/:filmId/reviews', reviewController.getReviews);
-app.get('/films/:filmId/reviews/:reviewerId', reviewController.getReview);
 
 
 /* --- LIKE API --- */
 
-app.get('/films/:filmId/likes/', likeController.getFilmLikes)
-app.post('/films/:filmId/likes/', isLoggedIn, likeController.addLike)
-app.delete('/films/:filmId/likes/', isLoggedIn, likeController.deleteLike)
-
+app.get('/films/:filmId/likes', likeController.getFilmLikes)
+app.post('/films/:filmId/likes', isLoggedIn, likeController.addLike)
+app.delete('/films/:filmId/likes', isLoggedIn, likeController.deleteLike)
 
 
 
@@ -80,8 +81,10 @@ app.use((error, request, response, next) => {
 	// Check the error is a validation error
 	if (error instanceof ValidationError) {
 		// Handle the error
-		response.status(400).send(error.validationErrors);
-		next();
+		response.status(400).send({
+			message: "Invalid Parameters.",
+			error: error.validationErrors
+		}).end();
 	} else {
 		// Pass error on if not a validation error
 		next(error);

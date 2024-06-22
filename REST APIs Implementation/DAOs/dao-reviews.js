@@ -3,7 +3,7 @@
 /* Data Access Object (DAO) module for accessing films data */
 
 const db = require('../db');
-
+const { port } = require('../index.js')
 
 /**
  * This function retrieves a film given its id owned by the logged user.
@@ -11,8 +11,10 @@ const db = require('../db');
 exports.getReviews = (filmId) => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM reviews WHERE
-			filmId = ?`;
+			`SELECT filmId, reviewerId, completed, reviewDate, reviews.rating, review
+			FROM reviews, films
+			WHERE reviews.filmId = films.id
+			AND filmId = ?`;
 
 		db.all(sql, [filmId], (err, rows) => {
 			if (err) {
@@ -20,13 +22,23 @@ exports.getReviews = (filmId) => {
 				return;
 			}
 			if (rows === undefined || rows.length === 0) {
-				resolve({ error: 'No review found.' });
+				resolve(null);
 				return;
 			}
-			// WARN: database is case insensitive. Converting "watchDate" to camel case format
-			const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
-			delete review.watchdate;  // removing lowercase "reviewdate"
-			resolve(review);
+
+			const reviews = rows.map((r) => {
+				if (r.completed) {
+					r['URI'] = port + '/films/' + filmId + '/reviews/' + r.reviewerId
+					return r;
+				}
+				else
+					return {
+						filmId: r.filmId,
+						reviewerId: r.reviewerId,
+						completed: r.completed
+					};
+			})
+			resolve(reviews);
 		});
 	});
 };
@@ -36,23 +48,22 @@ exports.getReviews = (filmId) => {
 exports.getReview = (filmId, reviewerId) => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM reviews WHERE
-			filmId = ? AND reviewerId = ?`;
+			`SELECT * FROM reviews
+			WHERE filmId = ? AND reviewerId = ?`;
 
 		db.get(sql, [filmId, reviewerId], (err, row) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row == undefined) {
-				resolve({ error: 'Review not found.' });
+			if (row === undefined) {
+				resolve(null);
 				return;
 			}
 
-			// WARN: database is case insensitive. Converting "watchDate" to camel case format
-			const review = Object.assign({}, row, { reviewDate: row.reviewdate });  // adding camelcase "watchDate"
-			delete review.reviewdate;  // removing lowercase "reviewdate"
-			resolve(review);
+			// const review = Object.assign({}, row, { reviewDate: row.reviewdate });  
+			// delete review.reviewdate;  
+			resolve(row);
 		});
 	});
 };

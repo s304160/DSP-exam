@@ -28,7 +28,7 @@ paths:
                 $ref: "#/components/examples/login1"
       responses:
         "200":
-          description: login successful
+          description: Login successful.
           headers:
             Set-Cookie:
               style: simple
@@ -41,21 +41,51 @@ paths:
                 type: string
                 x-content-type: application/json
         "400":
-          description: Invalid username/password
+          description: Invalid username/password.
+        "500":
+          description: Internal server error.
+      security: []
+      x-swagger-router-controller: User
+  /user/logout:
+    post:
+      tags:
+        - user
+      description: User logout
+      operationId: userLogout
+      responses:
+        "204":
+          description: Logout successful.
+          headers:
+            Set-Cookie:
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: string
+                x-content-type: application/json
+        "401":
+          description: Unauthorized.
+        "500":
+          description: Internal server error.
       security: []
       x-swagger-router-controller: User
   /films:
     get:
       tags:
+        - noAuth
         - film
       description:
         Returns a page of 10 films, filtered depending on the query parameters.
-        Only one parameter between 'owned' and 'toReview' is allowed to be set to 1
+        By default it will retrieve only public films.
+        Only one parameter between 'owned' and 'toReview' is allowed to be set to 1.
       operationId: getFilms
       parameters:
         - name: page
           in: query
-          description: Page number
+          description: Page number (default = 1)
           required: false
           explode: false
           schema:
@@ -88,8 +118,12 @@ paths:
                 items:
                   $ref: "/JSONSchemas/film.json"
                 x-content-type: application/json
+        "401":
+          description: Unauthorized.
         "404":
           description: No films found
+        "500":
+          description: Internal server error.
       security: []
       x-swagger-router-controller: Film
     post:
@@ -125,7 +159,7 @@ paths:
     get:
       tags:
         - film
-      description: Returns a film by Id if it is public or if it is owned by the logged user.
+      description: Returns a film by ID if it is public or if it is owned by the logged user.
       operationId: getFilm
       parameters:
         - name: filmId
@@ -147,16 +181,18 @@ paths:
         "400":
           description: Invalid ID
         "401":
-          description: Unauthorized - you are not the owner or the film is not public
+          description: Unauthorized - you are not the owner of the film or the film is not public.
         "404":
           description: Film not found
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Film
     put:
       tags:
         - film
-      description: Update a film by Id
+      description: Update a film by ID
       operationId: updateFilm
       parameters:
         - name: filmId
@@ -182,25 +218,25 @@ paths:
               schema:
                 $ref: "/JSONSchemas/film.json"
         "400":
-          description: Invalid ID
+          description: Invalid ID.
         "401":
-          description: Unauthorized - you are not the owner
+          description: Unauthorized - you are not the owner of the film.
         "404":
-          description: Film not found
-        "422":
-          description: Validation exception
+          description: Film not found.
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Film
     delete:
       tags:
         - film
-      description: Deletes a film by Id
+      description: Deletes a film by ID
       operationId: deleteFilm
       parameters:
         - name: filmId
           in: path
-          description: Film id to delete
+          description: Film ID to delete
           required: true
           style: simple
           explode: false
@@ -209,11 +245,13 @@ paths:
             format: int64
       responses:
         "400":
-          description: Invalid Id
+          description: Invalid ID
         "401":
-          description: Unauthorized - you are not the owner
+          description: Unauthorized - you are not the owner of the film.
         "404":
           description: Film not found
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Film
@@ -222,14 +260,22 @@ paths:
       tags:
         - review
         - noAuth
-      description: Returns all reviews of a public film
-      operationId: getReviewsByPublicFilmId
+      description: Returns a page of 10 reviews of a public film.
+      operationId: getReviewsOfPublicFilm
       parameters:
         - name: filmId
           in: path
           description: ID of film
           required: true
           style: simple
+          explode: false
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          description: Page number - (default = 1)
+          required: false
           explode: false
           schema:
             type: integer
@@ -246,11 +292,11 @@ paths:
                   $ref: "/JSONSchemas/review.json"
                 x-content-type: application/json
         "400":
-          description: Invalid ID
-        "401":
-          description: Unauthorized - the film is not public
+          description: Invalid ID.
         "404":
-          description: Film not found
+          description: Film not found. Be sure the ID is correct and the film is public.
+        "500":
+          description: Internal server error.
       security: []
       x-swagger-router-controller: Review
     post:
@@ -281,8 +327,8 @@ paths:
           description: Invalid input
         "401":
           description: Unauthorized
-        "422":
-          description: Validation exception
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
@@ -303,7 +349,7 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: reviewId
+        - name: reviewerId
           in: path
           description: ID of review
           required: true
@@ -324,17 +370,17 @@ paths:
                   $ref: "/JSONSchemas/review.json"
                 x-content-type: application/json
         "400":
-          description: Invalid ID
-        "401":
-          description: Unauthorized - the film is not public
+          description: Invalid ID.
         "404":
-          description: Film not found or review not found
+          description: Film not found or review not found.
+        "500":
+          description: Internal server error.
       security: []
       x-swagger-router-controller: Review
     put:
       tags:
         - review
-      description: Update a review by film Id and reviewerId
+      description: Update a review by film ID and reviewerId
       operationId: updateReview
       parameters:
         - name: filmId
@@ -367,23 +413,23 @@ paths:
         "400":
           description: Invalid ID
         "401":
-          description: Unauthorized
+          description: Unauthorized.
         "404":
-          description: Review not found
-        "422":
-          description: Validation exception
+          description: Film not found or review not found.
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
     delete:
       tags:
         - review
-      description: Deletes a review by Id
+      description: Deletes a review.
       operationId: deleteReview
       parameters:
-        - name: reviewId
+        - name: reviewerId
           in: path
-          description: Review Id to delete
+          description: Review ID to delete
           required: true
           style: simple
           explode: false
@@ -392,9 +438,13 @@ paths:
             format: int64
       responses:
         "400":
-          description: Invalid Id
+          description: Invalid ID.
         "401":
-          description: Unauthorized
+          description: Unauthorized.
+        "404":
+          description: Film not found or review not found.
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
@@ -402,26 +452,30 @@ paths:
     post:
       tags:
         - review
-      description: Automatically issue reviews for a film with no invitation in a way that the invitations to the users are balanced
+      description: Automatically issue reviews for a film with no invitation
+        in a way that the invitations to the users are balanced
       operationId: issueAutomaticallyReview
       responses:
         "200":
           description: successful operation
         "400":
-          description: Invalid input
+          description: Invalid ID.
         "401":
-          description: Unauthorized
-        "422":
-          description: Validation exception
+          description: Unauthorized.
+        "404":
+          description: Film not found.
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
-  /like/{filmId}:
+  /films/{filmId}/likes:
     get:
       tags:
         - like
         - noAuth
-      description: Returns the total number of likes of a public film and the list of users who like it
+      description: Returns the total number of likes of a public film
+        and the list of users who like it.
       operationId: getFilmLikes
       parameters:
         - name: filmId
@@ -456,7 +510,7 @@ paths:
             application/json: {}
 
         "404":
-          description: No like found associated to the film id.
+          description: No like found associated to the film ID.
         "500":
           description: Internal server error.
       security: []
@@ -469,7 +523,7 @@ paths:
       parameters:
         - name: filmId
           in: path
-          description: Film Id
+          description: Film ID
           required: true
           style: simple
           explode: false
@@ -478,11 +532,13 @@ paths:
             format: int64
       responses:
         "400":
-          description: Invalid Id
+          description: Invalid ID
         "401":
           description: Unauthorized
         "404":
           description: Film not found
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
@@ -494,7 +550,7 @@ paths:
       parameters:
         - name: filmId
           in: path
-          description: Film Id
+          description: Film ID
           required: true
           style: simple
           explode: false
@@ -508,6 +564,8 @@ paths:
           description: Invalid input
         "401":
           description: Unauthorized
+        "500":
+          description: Internal server error.
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review

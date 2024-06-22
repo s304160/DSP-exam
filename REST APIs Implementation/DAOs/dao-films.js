@@ -35,7 +35,7 @@ exports.listFilters = () => {
 
 
 // This function retrieves 10 public films.
-exports.getPublicFilmList = (page = 0) => {
+exports.getPublicFilmList = (page = 1) => {
 	return new Promise((resolve, reject) => {
 		const sql =
 			`SELECT id, title, owner, private FROM films WHERE
@@ -44,7 +44,7 @@ exports.getPublicFilmList = (page = 0) => {
 			LIMIT 10
 			OFFSET ?`;
 
-		db.all(sql, [10 * page], (err, rows) => {
+		db.all(sql, [10 * (page - 1)], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
@@ -54,7 +54,7 @@ exports.getPublicFilmList = (page = 0) => {
 
 			const films = rows.map((f) => {
 				//attach URI
-				f['URI'] = port + '/film/public/' + f.id
+				f['URI'] = port + '/films/' + f.id
 
 				return f;
 			});
@@ -82,14 +82,14 @@ exports.getOwnedFilmList = (userId, page = 0) => {
 			if (rows === undefined || rows.length === 0)
 				resolve(null);
 
-			const films = rows.map((e) => {
-				const film = Object.assign({}, e, { watchDate: dayjs(e.watchdate) });
-				delete film.watchdate;
+			const films = rows.map((f) => {
+				// let film = Object.assign({}, f, { watchDate: dayjs(f.watchdate) });
+				// delete film.watchdate;
 
 				//attach URI
-				film['URI'] = port + '/film/' + film.id
+				f['URI'] = port + '/films/' + f.id
 
-				return film;
+				return f;
 			});
 			resolve(films);
 		});
@@ -115,13 +115,12 @@ exports.getFilmsToReviewList = (userId, page = 0) => {
 			if (rows === undefined || rows.length === 0)
 				resolve(null);
 
-			const films = rows.map((e) => {
-				console.log(e.watchdate);
-				const film = Object.assign({}, e, { watchDate: dayjs(e.watchdate) });
+			const films = rows.map((f) => {
+				let film = Object.assign({}, f, { watchDate: dayjs(f.watchdate) });
 				delete film.watchdate;
 
 				//attach URI
-				film['URI'] = port + '/film/public/' + film.id
+				film['URI'] = port + '/films/' + film.id
 
 				return film;
 			});
@@ -169,23 +168,33 @@ exports.getPublicFilm = (filmId) => {
  */
 exports.getOwnedFilm = (id, userId) => {
 	return new Promise((resolve, reject) => {
-		const sql =
-			`SELECT * FROM films WHERE
-			id = ? AND owner = ?`;
+		const sql = `SELECT * FROM films WHERE id = ?`;
 
-		db.get(sql, [id, userId], (err, row) => {
+		db.get(sql, [id], (err, row) => {
 			if (err) {
 				reject(err);
 				return;
 			}
-			if (row === undefined)
+			if (row === undefined) {
 				resolve(null);
+				return;
+			}
+			if (!row.private) {
+				resolve({
+					id: row.id,
+					title: row.title,
+					owner: row.owner,
+					private: row.private
+				})
+				return;
+			}
 
-			// WARN: database is case insensitive. Converting "watchDate" to camel case format
-			const film = Object.assign({}, row, { watchDate: row.watchdate });  // adding camelcase "watchDate"
-			delete film.watchdate;  // removing lowercase "watchdate"
-			resolve(film);
+			if (row.owner === userId) {
+				resolve(row);
+				return;
+			}
 
+			resolve(false);
 		});
 	});
 };
@@ -219,7 +228,7 @@ exports.createFilm = (film) => {
 				}
 
 				// Returning the newly created object with the DB additional properties to the client.			
-				resolve(exports.getFilm(this.lastID, film.owner));
+				resolve(exports.getOwnedFilm(this.lastID, film.owner));
 			});
 	});
 };
@@ -227,11 +236,15 @@ exports.createFilm = (film) => {
 // This function updates an existing film given its id and the new properties.
 exports.updateFilm = (id, userId, film) => {
 	return new Promise((resolve, reject) => {
-		const sql =
-			`UPDATE films SET title = ?, private = ?, favorite = ?, watchDate = ?, rating = ?
-			WHERE id = ? AND owner = ?`;
+		let sql = `UPDATE films SET `;
+		if (film.title !== undefined) sql += `title = "${film.title}", `;
+		if (film.favorite !== undefined) sql += `favorite = ${film.favorite}, `;
+		if (film.watchDate !== undefined) sql += `watchDate = "${film.watchDate}", `;
+		if (film.rating !== undefined) sql += `rating = ${film.rating}, `;
+
+		sql += ` owner = ? WHERE id = ? AND owner = ?`;
 		db.run(sql,
-			[film.title, film.private, film.favorite, film.watchDate, film.rating, id, userId],
+			[userId, id, userId],
 			function (err, result) {
 				if (err) {
 					reject(err);
@@ -240,7 +253,7 @@ exports.updateFilm = (id, userId, film) => {
 				if (this.changes === 0) {
 					resolve(null)
 				}
-				resolve(exports.getFilm(id, userId));
+				resolve(exports.getOwnedFilm(id, userId));
 			});
 	});
 };

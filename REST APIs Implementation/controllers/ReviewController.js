@@ -73,6 +73,7 @@ module.exports.issueAutomaticReviews = function issueAutomaticReviews(req, res, 
 		});
 };
 
+
 module.exports.updateReview = function updateReview(req, res, next) {
 	if (isNaN(Number.parseInt(req.params.filmId))) {
 		res.status(400).send({ error: 'Invalid Id.' }).end()
@@ -91,6 +92,7 @@ module.exports.updateReview = function updateReview(req, res, next) {
 			res.status(500).send({ error: 'Internal server error. ' + e }).end()
 		});
 };
+
 
 module.exports.deleteReview = function deleteReview(req, res, next) {
 	if (isNaN(Number.parseInt(req.params.filmId))

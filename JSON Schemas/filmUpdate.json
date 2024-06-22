@@ -1,0 +1,24 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "filmUpdate.json",
+	"type": "object",
+	"properties": {
+		"title": {
+			"type": "string"
+		},
+		"watchDate": {
+			"type": "string",
+			"format": "date"
+		},
+		"rating": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 10
+		},
+		"favorite": {
+			"type": "boolean",
+			"default": false
+		}
+	},
+	"additionalProperties": false
+}

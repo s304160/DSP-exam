@@ -11,7 +11,7 @@ exports.getFilmLikes = (filmId) => {
 		let totLikes = 0;
 
 		const likesQuery =
-			`SELECT COUNT(*) AS totLikes  FROM likes
+			`SELECT COUNT(*) AS totLikes FROM likes
 			WHERE filmId = ?`;
 
 		db.get(likesQuery, [filmId], (err, row) => {
