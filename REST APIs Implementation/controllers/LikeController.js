@@ -1,5 +1,5 @@
 const { isLoggedIn, writeJson } = require('../utils/utils.js');
-const likeDAO = require('../DAOs/dao-like.js');
+const likeDAO = require('../DAOs/dao-likes.js');
 
 
 module.exports.getFilmLikes = function getFilmLike(req, res, next) {
