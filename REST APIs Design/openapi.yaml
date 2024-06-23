@@ -294,7 +294,7 @@ paths:
         "400":
           description: Invalid ID.
         "404":
-          description: Film not found. Be sure the ID is correct and the film is public.
+          description: Film not found.
         "500":
           description: Internal server error.
       security: []
@@ -448,7 +448,7 @@ paths:
       security:
         - cookieAuth: []
       x-swagger-router-controller: Review
-  /films/{filmId}/autoReviews:
+  /films/{filmId}/automaticReviews:
     post:
       tags:
         - review

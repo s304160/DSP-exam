@@ -8,8 +8,6 @@ const db = require('../db');
 exports.getFilmLikes = (filmId) => {
 	return new Promise((resolve, reject) => {
 
-		let totLikes = 0;
-
 		const likesQuery =
 			`SELECT COUNT(*) AS totLikes FROM likes
 			WHERE filmId = ?`;
@@ -20,34 +18,33 @@ exports.getFilmLikes = (filmId) => {
 				return;
 			}
 
-			console.log(JSON.stringify(row));
-
 			if (row === undefined || row.totLikes === 0) {
 				resolve(null);
 				return;
 			}
 
-			totLikes = row.totLikes;
+			let totLikes = row.totLikes;
+			if (totLikes !== 0) {
+				const users =
+					`SELECT u.id, u.email, u.name
+					FROM likes l, users u
+					WHERE l.userId = u.id
+					AND l.filmId = ?`;
 
-		});
+				db.all(users, [filmId], (err, rows) => {
+					if (err) {
+						reject(err);
+						return;
+					}
 
-
-		const users =
-			`SELECT u.id, u.email, u.name
-			FROM likes l, users u
-			WHERE l.userId = u.id
-			AND l.filmId = ?`;
-
-		db.all(users, [filmId], (err, rows) => {
-			if (err) {
-				reject(err);
-				return;
+					resolve({ totLikes: totLikes, users: rows });
+				});
 			}
 
-			console.log(JSON.stringify(rows));
-
-			resolve({ totLikes: totLikes, users: rows });
 		});
+
+
+
 	});
 };
 

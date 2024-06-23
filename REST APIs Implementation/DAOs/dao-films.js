@@ -6,29 +6,12 @@ const db = require('../db');
 const dayjs = require("dayjs");
 const { port } = require('../index.js')
 
-const filters = {
-	'filter-all': { label: 'All', id: 'filter-all', filterFn: () => true },
-	'filter-favorite': { label: 'Favorites', id: 'filter-favorite', filterFn: film => film.favorite },
-	'filter-best': { label: 'Best Rated', id: 'filter-best', filterFn: film => film.rating >= 5 },
-	'filter-lastmonth': { label: 'Seen Last Month', id: 'filter-lastmonth', filterFn: film => isSeenLastMonth(film) },
-	'filter-unseen': { label: 'Unseen', id: 'filter-unseen', filterFn: film => film.watchDate.isValid() ? false : true }
-};
-
 
 const isSeenLastMonth = (film) => {
 	if (film.watchDate == null || typeof film.watchDate.diff !== 'function')
 		return false;
 	return film.watchDate.diff(dayjs(), 'month') === 0;
 };
-
-/** NOTE
- * return error messages as json object { error: <string> }
- */
-
-// This function returns the filters object.
-exports.listFilters = () => {
-	return filters;
-}
 
 
 //#region GET multiple
@@ -41,8 +24,7 @@ exports.getPublicFilmList = (page = 1) => {
 			`SELECT id, title, owner, private FROM films WHERE
 			private = 0
 			ORDER BY id
-			LIMIT 10
-			OFFSET ?`;
+			LIMIT 10 OFFSET ?`;
 
 		db.all(sql, [10 * (page - 1)], (err, rows) => {
 			if (err) {
@@ -74,7 +56,8 @@ exports.getOwnedFilmList = (userId, page = 0) => {
 			WHERE owner = ?
 			ORDER BY id
 			LIMIT 10 OFFSET ?`;
-		db.all(sql, [userId, 10 * page], (err, rows) => {
+
+		db.all(sql, [userId, 10 * (page - 1)], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
@@ -84,9 +67,6 @@ exports.getOwnedFilmList = (userId, page = 0) => {
 				resolve(null);
 
 			const films = rows.map((f) => {
-				// let film = Object.assign({}, f, { watchDate: dayjs(f.watchdate) });
-				// delete film.watchdate;
-
 				//attach URI
 				f['filmURI'] = port + '/films/' + f.id
 				f['filmReviewsURI'] = port + '/films/' + f.id + '/reviews'
@@ -103,12 +83,13 @@ exports.getOwnedFilmList = (userId, page = 0) => {
 exports.getFilmsToReviewList = (userId, page = 0) => {
 	return new Promise((resolve, reject) => {
 		const sql =
-			`SELECT * FROM films, reviews
+			`SELECT films.id, films.title, films.owner, films.favorite, films.watchDate, films.rating
+			FROM 	films, reviews
 			WHERE 	reviewerId = ?
 			AND		completed = 0
 			ORDER BY id
 			LIMIT 10 OFFSET ?`;
-		db.all(sql, [userId, 10 * page], (err, rows) => {
+		db.all(sql, [userId, 10 * (page - 1)], (err, rows) => {
 			if (err) {
 				reject(err);
 				return;
@@ -133,9 +114,6 @@ exports.getFilmsToReviewList = (userId, page = 0) => {
 };
 
 
-
-
-
 //#endregion
 
 
@@ -143,7 +121,9 @@ exports.getFilmsToReviewList = (userId, page = 0) => {
 //#region GET single
 
 
-// This function retrieves a public film given its id.
+/**
+ * This function retrieves a public film given its id.
+ */
 exports.getPublicFilm = (filmId) => {
 	return new Promise((resolve, reject) => {
 		const sql =
@@ -207,14 +187,11 @@ exports.getOwnedFilm = (id, userId) => {
 };
 
 
-
-
 //#endregion 
 
 
 
-//#region  CRUD
-
+//#region  POST
 
 
 /**
@@ -240,6 +217,11 @@ exports.createFilm = (film) => {
 	});
 };
 
+//#endregion
+
+//#region  UPDATE
+
+
 // This function updates an existing film given its id and the new properties.
 exports.updateFilm = (id, userId, film) => {
 	return new Promise((resolve, reject) => {
@@ -264,6 +246,10 @@ exports.updateFilm = (id, userId, film) => {
 			});
 	});
 };
+
+//#endregion
+
+//#region  DELETE
 
 // This function deletes an existing film given its id.
 exports.deleteFilm = (filmId, userId) => {

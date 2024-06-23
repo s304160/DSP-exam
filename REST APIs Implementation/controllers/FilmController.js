@@ -1,11 +1,6 @@
-// 'use strict';
+'use strict';
 
-
-// const { isLoggedIn, writeJson } = require('../utils/utils.js');
 const filmDAO = require('../DAOs/dao-films.js');
-
-const { Validator, ValidationError } = require("express-json-validator-middleware");
-
 
 const isLoggedIn = function (req) {
 	if (req.isAuthenticated())
@@ -70,7 +65,7 @@ const getPublicFilmList = function (req, res, next) {
 };
 
 const getOwnedFilmList = function (req, res, next) {
-	filmDAO.getOwnedFilmList(req.user.id, req.params.page)
+	filmDAO.getOwnedFilmList(req.user.id, req.query.page)
 		.then(function (response) {
 			if (response)
 				res.status(200).send(response).end()

@@ -15,7 +15,7 @@ module.exports.getReviews = function getReviews(req, res, next) {
 			if (response)
 				res.status(200).send(response).end()
 			else
-				res.status(404).send({ error: 'Film not found.' }).end()
+				res.status(404).send({ error: 'No review found.' }).end()
 
 		})
 		.catch((e) => {
@@ -44,10 +44,24 @@ module.exports.getReview = function getReview(req, res, next) {
 };
 
 module.exports.issueReview = function issueReview(req, res, next) {
-	reviewDAO.issueReview(req.params.filmId, req.body.reviewers)
+	reviewDAO.issueReview(req.params.filmId, req.body.reviewers, req.user.id)
 		.then(function (response) {
-			if (response)
-				res.status(201).send(response).end()
+
+			switch (response) {
+				case 400:
+					res.status(400).send({ error: "You cannot issue a review for a private film." }).end()
+					break;
+				case 401:
+					res.status(401).send({ error: "You cannot issue a review for a film you do not own." }).end()
+					break;
+				case 404:
+					res.status(404).send({ error: "Film not found." }).end()
+					break;
+				default:
+					res.status(201).send(response).end()
+					break;
+			}
+
 
 		})
 		.catch((e) => {
@@ -61,13 +75,26 @@ module.exports.issueAutomaticReviews = function issueAutomaticReviews(req, res, 
 		return;
 	}
 
-	reviewDAO.issueAutomaticReviews(req.params.filmId)
+	reviewDAO.issueAutomaticReviews(req.params.filmId, req.user.id)
 		.then(function (response) {
-			if (response)
-				res.status(201).send(response).end()
-			else
-				res.status(404).send({ error: 'Film not found.' }).end()
 
+			switch (response) {
+				case 400:
+					res.status(400).send({ error: "You cannot issue reviews for a private film." }).end();
+					break;
+				case 401:
+					res.status(401).send({ error: "You cannot issue reviews for a film you do not own." }).end();
+					break;
+				case 404:
+					res.status(404).send({ error: "Film not found." }).end();
+					break;
+				case 409:
+					res.status(409).send({ error: "The film already has at least one review issued." }).end();
+					break;
+				default:
+					res.status(201).send(response).end()
+					break;
+			}
 		})
 		.catch((e) => {
 			res.status(500).send({ error: 'Internal server error. ' + e }).end()
